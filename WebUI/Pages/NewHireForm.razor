@@ -1,0 +1,184 @@
+﻿@page "/forms/newhire"
+@using Domain.Models
+@using OnBoarding.ViewModels
+@using System.Reflection
+@inject AppService DrawingService
+@inject IOnBordingFormRepository OnBordingFormRepository
+@inject NavigationManager NavigationManager
+@inject AppService AppService
+
+<PageTitle>New Hire</PageTitle>
+
+<style>
+    .rz-message.rz-messages-error.rz-message-popup {
+        position: absolute;
+        top: 30px;
+        width: 60%;
+        left: -5px;
+    }
+</style>
+
+<RadzenTemplateForm TItem="OnBoardingFormVM" Data="Model" Style="width:1100px" InvalidSubmit="OnInvalidSubmit" Submit="OnFormSave" class="mx-auto">
+    <div class="row">
+
+        <div class="col-md-5 mb-3">
+            <div class="row">
+                <div class="col-md-6 align-items-center d-flex">
+                    <RadzenLabel Text="New hire Id" />
+                </div>
+                <div class="col-md-7 position-relative">
+                    <RadzenTextBox Style="width: 100%;" Name="NewHireId" Change="OnHireValueChanged" @bind-Value=hireId />
+                    <RadzenRequiredValidator Component="NewHireId" Style="width:max-content; left: 6px; top:18px" Text="New hire Id is required" Popup=true />
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-md-5 mb-3">
+            <div class="row">
+                <div class="col-md-6 align-items-center d-flex">
+                    <RadzenLabel Text="Title/Business Units" />
+                </div>
+                <div class="col-md-7">
+                    <RadzenDropDownDataGrid @bind-Value="@titleBusinessUnit" Name="TitleBusinessUnit" TextProperty="Unit" FilterOperator="StringFilterOperator.Contains" Placeholder="Select" TValue="TitleBusniessUnit" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowFiltering="true" AllowClear="true"
+                                            Data=@titleBusniessUnits
+                                            Change=OnBusinessUnitChange Style="width: 100%">
+
+                        <Columns>
+                            <RadzenDropDownDataGridColumn Property="Unit" Type="typeof(string)" />
+                        </Columns>
+                    </RadzenDropDownDataGrid>
+                    <RadzenRequiredValidator Component="TitleBusinessUnit" Text="Title/Business Unit is required" Popup=true Style="width:max-content; left: 6px; top:18px" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <OnbordingFormComponent Model="Model" />
+    <RadzenButton class="my-4" style="width: 160px; background:#244061" Icon="save" BusyText="Saving ..." IsBusy=@IsSavingForm ButtonType="ButtonType.Submit" Text="Save" />
+</RadzenTemplateForm>
+
+@code {
+
+    [Inject]
+    private NotificationService? NotificationService { get; set; }
+    [Parameter]
+    public OnBoardingFormVM Model { get; set; } = new();
+    [Parameter]
+    public bool IsCompleted { get; set; }
+
+    bool IsSavingForm;
+    bool IsGeneratingPDF;
+    private bool isFormCompleted;
+    private TitleBusniessUnit? titleBusinessUnit;
+    private IEnumerable<Employee>? employees;
+    private IEnumerable<TitleBusniessUnit>? titleBusniessUnits;
+    private string? hireId;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            employees = await OnBordingFormRepository.GetEmployees();
+            titleBusniessUnits = await OnBordingFormRepository.GetBusinessUnits(new { Id = string.Empty });
+            StateHasChanged();
+        }
+    }
+
+    async Task OnFormSave(OnBoardingFormVM model)
+    {
+        IsSavingForm = true;
+        Model.IsCompleted = IsFormCompleted(Model);
+        Model.TitleBusinessUnitId = titleBusinessUnit?.Id;
+        await Task.Delay(100);
+        await OnBordingFormRepository.SaveNewHireForm(Model);
+        EmailSettings.SetSettings();
+        var formUri = $"{NavigationManager.BaseUri}forms/inprogress/{Model.FormId}";
+        var content = File.ReadAllText(EmailSettings.BodyTemplate)
+        .Replace("_new_", "A new")
+        .Replace("_newHireName_", Model?.NewHireName)
+        .Replace("_formState_", "submitted.")
+        .Replace("_formUri_", formUri);
+
+        var recipients = new List<string>();
+        recipients.Add("edjimenez@firstam.com");
+        recipients.Add("odiaz@synergiescorp.com");
+
+        if (model?.Email is not null)
+        {
+            recipients.Add(model.Email);
+        }
+
+        if (model?.TrainerEmail is not null)
+        {
+            recipients.Add(model.TrainerEmail);
+        }
+
+        if (model?.LeaderEmail is not null)
+        {
+            recipients.Add(model.LeaderEmail);
+        }
+
+        var recipient = string.Join(',', recipients);
+
+        await Mailer.SendWithGraph(recipient, "Onboarding form", content, EmailSettings.Signature);
+        Model = new();
+        titleBusinessUnit = null;
+        hireId = null;
+        NotificationService?.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Form saved", Duration = 2000 });
+        IsSavingForm = false;
+        await AppService.ScrollTop("");
+    }
+
+    async Task OnGeneratingPDFBusyClick()
+    {
+        IsGeneratingPDF = true;
+        var data = await DrawingService.ExportPDF("");
+        await Task.Delay(2000);
+        IsGeneratingPDF = false;
+    }
+
+    async Task OnInvalidSubmit()
+    {
+        await AppService.ScrollTop("");
+    }
+
+    bool IsFormCompleted(OnBoardingFormVM onBoardingFormVM)
+    {
+        isFormCompleted = !onBoardingFormVM.GetType().GetProperties().Any(form =>
+            form.PropertyType == typeof(string)
+            && string.IsNullOrEmpty((string?)form.GetValue(onBoardingFormVM))
+            || form.PropertyType == typeof(object)
+            && form.GetValue(onBoardingFormVM) == null
+        );
+
+        return isFormCompleted;
+    }
+
+    async Task OnHireValueChanged()
+    {
+        var newHire = await OnBordingFormRepository.GetEmployeeById(new { UserId = hireId });
+        Model.NewHireName = newHire?.IdCommonName;
+        Model.NewHiredPhoneNumber = newHire?.PersonalCellphone;
+        Model.NewHireId = newHire?.Id;
+        Model.Email = newHire?.Email;
+    }
+
+    async Task OnBusinessUnitChange()
+    {
+        if (titleBusinessUnit is not null)
+        {
+            var id = titleBusinessUnit.LeaderId;
+            var trainer = await OnBordingFormRepository.GetEmployeeById(new { UserId = titleBusinessUnit.TrainerId });
+            var leader = await OnBordingFormRepository.GetEmployeeById(new { UserId = titleBusinessUnit.LeaderId });
+            Model.TrainerName = trainer.IdCommonName;
+            Model.TrainerEmail = trainer.Email;
+            Model.TrainerId = trainer?.Id;
+            Model.LeaderName = leader?.IdCommonName;
+            Model.LeaderEmail = leader?.Email;
+            Model.LeaderId = leader?.Id;
+            Model.TrainerPhoneNumber = trainer?.InternalCellphone;
+            Model.LeaderPhoneNumber = leader?.InternalCellphone;
+            Model.TitleBusinessUnit = titleBusinessUnit.Unit;
+        }
+    }
+}

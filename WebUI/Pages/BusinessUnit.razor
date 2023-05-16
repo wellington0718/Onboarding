@@ -1,0 +1,187 @@
+﻿@page "/businessunit"
+@using Domain.Models
+@inject IOnBordingFormRepository OnBordingFormRepository
+
+<style>
+
+    .rz-message.rz-messages-error.rz-message-popup {
+        position: absolute;
+        top: 20px;
+        width: 70%;
+        left: 8px;
+    }
+</style>
+
+<RadzenTemplateForm TItem="TitleBusniessUnit" Data="model" Submit="AddBusinessUnit">
+    <div class="row align-items-center mt-2">
+
+        <div class="col-md-3 mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <RadzenLabel Text="Title/Business Unit" />
+                </div>
+                <div class="col-md-10">
+                    <RadzenTextBox Name="Unit" @bind-Value=model.Unit />
+                    <RadzenRequiredValidator Component="Unit" Text="Title/Business Unit is required" Popup=true Style="position: absolute" />
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="row">
+                <div class="col-md-4 align-items-center d-flex">
+                    <RadzenLabel Text="Leader" />
+                </div>
+                <div class="col-md-9">
+                    <RadzenDropDownDataGrid @bind-Value="leader" Name="Leader" TextProperty="IdCommonName" Placeholder="Select" FilterOperator="StringFilterOperator.Contains" TValue="Employee" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowFiltering="true" AllowClear="true"
+                                            Data=@employees
+                                            Change="(() =>  model.LeaderId = leader?.Id)">
+
+                        <Columns>
+                            <RadzenDropDownDataGridColumn Property="IdCommonName" Type="typeof(string)" Title="Employee" />
+                        </Columns>
+                    </RadzenDropDownDataGrid>
+                    <RadzenRequiredValidator Component="Leader" Visible=true Text="Leader is required" Popup=true />
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="row">
+                <div class="col-md-5 align-items-center d-flex">
+                    <RadzenLabel Text="Trainer" />
+                </div>
+                <div class="col-md-10">
+                    <RadzenDropDownDataGrid @bind-Value=trainer Name="Trainer" TValue="Employee" TextProperty="IdCommonName" FilterOperator="StringFilterOperator.Contains" Placeholder="Select" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowFiltering="true" AllowClear="true"
+                                            Data=@employees
+                                            Change="(() =>  model.LeaderId = leader?.Id)">
+
+                        <Columns>
+                            <RadzenDropDownDataGridColumn Property="IdCommonName" Type="typeof(string)" Title="Employee" />
+                        </Columns>
+                    </RadzenDropDownDataGrid>
+                    <RadzenRequiredValidator Component="Trainer" Text="Trainer is required" Popup=true />
+                </div>
+            </div>
+        </div>
+        <div class="col-md-1" style="margin-left:-75px; ">
+            <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Success" ButtonType="ButtonType.Submit" Style="width: 160px; background:#244061" Text="Save" Title="Save" Class="m-1" @onclick:stopPropagation="true" />
+        </div>
+    </div>
+
+</RadzenTemplateForm>
+
+<RadzenDataGrid RowSelect="@((selectedRow) => OnSelectRow(selectedRow, "Edit"))" class="mx-auto mt-3" AllowRowSelectOnRowClick=true Data="busniessUnits" AllowSorting="true" AllowFiltering="true" AllowPaging="true" PageSize="5" SelectionMode="DataGridSelectionMode.Single" @bind-Value=@SelectedBusniessUnits
+                PagerHorizontalAlign="HorizontalAlign.Center" FilterMode="FilterMode.Simple" TItem="TitleBusniessUnit" ColumnWidth="200px" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+    <Columns>
+        <RadzenDataGridColumn TItem="TitleBusniessUnit" Property="Unit" Title="Business Unit" />
+        <RadzenDataGridColumn TItem="TitleBusniessUnit" Property="Leader" Title="Leader" />
+        <RadzenDataGridColumn TItem="TitleBusniessUnit" Property="Trainer" Title="Trainer" />
+        <RadzenDataGridColumn TItem="TitleBusniessUnit" Title="Edit" Sortable=false>
+            <Template Context="titleBusniessUnit">
+                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Warning" ButtonType="ButtonType.Submit" Text="Edit"
+                              Title="Edit" Class="m-1 text-left" Click="@(() => OnSelectRow(titleBusniessUnit, "edit"))" @onclick:stopPropagation="true" />
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="TitleBusniessUnit" Title="Delete" Sortable=false>
+            <Template Context="titleBusniessUnit">
+                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => OnSelectRow(titleBusniessUnit, "delete"))" ButtonType="ButtonType.Submit"
+                              Text="Delete" Title="Edit" Class="m-1" @onclick:stopPropagation="true" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private Employee? trainer;
+    private Employee? leader;
+    private TitleBusniessUnit model = new();
+    private IEnumerable<Employee>? employees;
+    private List<TitleBusniessUnit> busniessUnits = new();
+    private IList<TitleBusniessUnit>? SelectedBusniessUnits;
+    [Inject]
+    private DialogService? DialogService { get; set; }
+    [Inject]
+    private NotificationService? NotificationService { get; set; }
+    RadzenDataGrid<TitleBusniessUnit>? grid;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            DialogService?.Open<Loading>(null);
+            employees = await OnBordingFormRepository.GetEmployees();
+            busniessUnits = (await OnBordingFormRepository.GetBusinessUnits(new { Id = string.Empty })).ToList();
+            StateHasChanged();
+            DialogService?.Close();
+        }
+    }
+
+
+    async Task OnSelectRow(TitleBusniessUnit busniessUnit, string action)
+    {
+
+        await Task.FromResult(true);
+
+        if (busniessUnit is not null)
+        {
+            SelectedBusniessUnits = new List<TitleBusniessUnit>();
+            SelectedBusniessUnits.Add(busniessUnit);
+
+            model.Id = busniessUnit.Id;
+
+            if (!action.Equals("delete"))
+            {
+                leader = employees?.FirstOrDefault(e => e.Id.Equals(busniessUnit.LeaderId));
+                trainer = employees?.FirstOrDefault(e => e.Id.Equals(busniessUnit.TrainerId));
+                model.Unit = busniessUnit.Unit;
+            }
+            else
+            {
+
+                var result = await DialogService.OpenAsync("Delete business unit", ds =>
+                @<div>
+                    <div class="row">
+                        <div class="col">
+                            <p>By deleting a business unit, any form related to it will be deleted as well.</p>
+                            <p>Are you sure?</p>
+                            <RadzenButton Text="Ok" Click="() => ds.Close(true)" class="me-1" Style="width: 80px;" />
+                            <RadzenButton Text="Cancel" Click="() => ds.Close(false)" ButtonStyle="ButtonStyle.Light" class="me-1" />
+                        </div>
+                    </div>
+                </div>);
+
+                if (result ?? false)
+                {
+                    model.IsAdding = false;
+                    var isUnitSaved = await OnBordingFormRepository.SaveBusinessUnit(model);
+                    busniessUnits = (await OnBordingFormRepository.GetBusinessUnits(new { Id = string.Empty })).ToList();
+                    NotificationService?.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Business deleted", Duration = 2000 });
+                }
+
+                trainer = null;
+                model = new();
+                leader = null;
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    async Task AddBusinessUnit()
+    {
+        model.TrainerId = trainer?.Id;
+        model.Trainer = trainer?.IdCommonName;
+        model.LeaderId = leader?.Id;
+        model.Leader = leader?.IdCommonName;
+
+        await OnBordingFormRepository.SaveBusinessUnit(model);
+        busniessUnits = (await OnBordingFormRepository.GetBusinessUnits(new { Id = string.Empty })).ToList();
+        NotificationService?.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Business Unit saved", Duration = 2000 });
+
+        trainer = null;
+        model = new();
+        leader = null;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,294 @@
+﻿@page "/forms/inprogress"
+@page "/forms/inprogress/{formId}"
+@using System.Reflection
+@using System.Security.Claims
+@using Domain.Models
+
+@inject IOnBordingFormRepository OnBordingFormRepository
+@inject NavigationManager NavigationManager
+@inject AppService AppService
+
+<style>
+    .rz-message.rz-messages-error.rz-message-popup {
+        position: absolute;
+        top: 30px;
+        width: 60%;
+        left: -5px;
+    }
+</style>
+
+<PageTitle>Inprogress Form</PageTitle>
+
+<RadzenDataGrid Style="width:1100px" class="mx-auto mb-5" AllowRowSelectOnRowClick=true RowSelect="OnSelectRow" Data="onBoardingForms" AllowSorting="true" AllowFiltering="true" AllowPaging="true" PageSize="5" SelectionMode="DataGridSelectionMode.Single" @bind-Value=@SelectedOnBoardingForms
+                PagerHorizontalAlign="HorizontalAlign.Center" FilterMode="FilterMode.Simple" TItem="OnBoardingFormVM" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+    <Columns>
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Property="Unit" Title="Business Unit" />
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Property="NewHireName" Title="New hire" />
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Property="LeaderName" Title="Leader" />
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Property="TrainerName" Title="Trainer" />
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Title="Edit" Sortable="false" Filterable="false" Width="100px" TextAlign="TextAlign.Center">
+            <Template Context="onBoardingFormVM">
+                <RadzenButton Icon="edit" Title="Edit" Class="m-1" Click="() => GetNewHireFormById(onBoardingFormVM)" @onclick:stopPropagation="true" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@if (IsOnBoardingFormSelected)
+{
+    <RadzenTemplateForm TItem="OnBoardingFormVM" Data="model" InvalidSubmit="OnInvalidSubmit" Submit="OnUpdateNewHireForm" Style="width:1100px" class="mx-auto">
+        @if (hasBussinessUnit || hasManageFormsPermission)
+        {
+            <div class="row">
+
+                <div class="col-md-5 mb-3">
+                    <div class="row">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="New hire Id" />
+                        </div>
+                        <div class="col-md-9 position-relative">
+                            <RadzenTextBox style="width: 100%;" Name="NewHireId" Change="OnHireValueChanged" @bind-Value=hireId />
+                            <RadzenRequiredValidator Component="NewHireId" Text="New hire Id is required" Popup=true />
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="col-md-5 mb-3">
+                    <div class="row">
+                        <div class="col-md-5 align-items-center d-flex">
+                            <RadzenLabel Text="Title/Business Units" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenDropDownDataGrid @bind-Value="@titleBusinessUnit" Name="TitleBusinessUnit" TextProperty="Unit" FilterOperator="StringFilterOperator.Contains" Placeholder="Select" TValue="TitleBusniessUnit" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowFiltering="true" AllowClear="true"
+                                            Data=@titleBusniessUnits
+                                            Change=OnBusinessUnitChange Style="width: 100%">
+
+                                <Columns>
+                                    <RadzenDropDownDataGridColumn Property="Unit" Type="typeof(string)" />
+                                </Columns>
+
+                            </RadzenDropDownDataGrid>
+                            <RadzenRequiredValidator Component="TitleBusinessUnit" Text="Title/Business Unit is required" Popup=true Style="left: 10px;" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        <OnbordingFormComponent Model="model" />
+        <RadzenButton class="my-4" style="width: 160px; background:#244061" Icon="save" BusyText="Saving ..." IsBusy=@IsSavingForm ButtonType="ButtonType.Submit" Text="Save" />
+    </RadzenTemplateForm>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+    [Inject]
+    private NotificationService? NotificationService { get; set; }
+    [Inject]
+    private DialogService? DialogService { get; set; }
+    [Parameter]
+    public string? FormId { get; set; }
+    RadzenDataGrid<OnBoardingFormVM>? grid;
+    private List<OnBoardingFormVM> onBoardingForms = new();
+    private IList<OnBoardingFormVM>? SelectedOnBoardingForms;
+    private OnBoardingFormVM? SelectedOnBoardingForm;
+    private OnBoardingFormVM model = new();
+    private int rowCounter = 0;
+    [CascadingParameter]
+    private Error? Error { get; set; }
+    bool IsSavingForm;
+    bool IsGeneratingPDF;
+    bool IsOnBoardingFormSelected;
+    private string? hireId;
+    private string? userId;
+    private bool isFormCompleted;
+    private TitleBusniessUnit? titleBusinessUnit;
+    private bool hasManageFormsPermission;
+    private bool hasBussinessUnit;
+    private List<TitleBusniessUnit> titleBusniessUnits = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthenticationStateTask is not null)
+        {
+            try
+            {
+                DialogService?.Open<Loading>(null);
+                userId = (await AuthenticationStateTask)
+                           .User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value;
+
+                hasManageFormsPermission = (await OnBordingFormRepository.GetEmployeePermissions(new { userId })).Contains("MANAGEFORMS");
+                onBoardingForms = (await OnBordingFormRepository.GetNewHireForms(new { IsCompleted = 0, userId, hasManageFormsPermission })).ToList();
+                titleBusniessUnits = (await OnBordingFormRepository.GetBusinessUnits(new { Id = string.Empty })).ToList();
+                hasBussinessUnit = titleBusniessUnits.Any(b => b.TrainerId.Equals(userId) || b.LeaderId.Equals(userId));
+
+                if (!string.IsNullOrEmpty(FormId))
+                {
+                    SelectedOnBoardingForms = onBoardingForms.Where(forms => forms.FormId.Equals(FormId)).ToList();
+                    model = SelectedOnBoardingForms.First();
+                    titleBusinessUnit = titleBusniessUnits.FirstOrDefault(t => t.Id.Equals(model.TitleBusinessUnitId));
+                    IsOnBoardingFormSelected = true;
+                    hireId = model.NewHireId?.Substring(4);
+                }
+
+                StateHasChanged();
+                DialogService?.Close();
+            }
+            catch (Exception e)
+            {
+
+                Error?.ProcessError(e);
+            }
+        }
+    }
+
+    async Task OnInvalidSubmit()
+    {
+        await AppService.ScrollTop("");
+    }
+
+    private async Task OnSelectRow(OnBoardingFormVM selectedOnBoardingForm)
+    {
+        await GetNewHireFormByToEdit(selectedOnBoardingForm);
+    }
+
+    private async Task GetNewHireFormByToEdit(OnBoardingFormVM selectedOnBoardingForm)
+    {
+        if (selectedOnBoardingForm is not null)
+        {
+            DialogService?.Open<Loading>(null);
+            await Task.FromResult(SelectedOnBoardingForms);
+
+            IsOnBoardingFormSelected = true;
+            model = selectedOnBoardingForm;
+            titleBusinessUnit = titleBusniessUnits.FirstOrDefault(t => t.Id.Equals(selectedOnBoardingForm.TitleBusinessUnitId));
+            hireId = model.NewHireId?.Substring(4);
+            SelectedOnBoardingForms = onBoardingForms.Where(forms => forms.FormId.Equals(selectedOnBoardingForm.FormId)).ToList();
+            DialogService?.Close();
+            StateHasChanged();
+
+        }
+    }
+
+    async Task OnHireValueChanged()
+    {
+        var newHire = await OnBordingFormRepository.GetEmployeeById(new { UserId = hireId });
+        model.NewHireName = newHire?.IdCommonName;
+        model.NewHireId = newHire?.Id;
+        model.Email = newHire?.Email;
+        model.NewHiredPhoneNumber = newHire?.PersonalCellphone;
+    }
+
+    async Task OnBusinessUnitChange()
+    {
+        if (titleBusinessUnit is not null)
+        {
+            var leader = await OnBordingFormRepository.GetEmployeeById(new { UserId = titleBusinessUnit.LeaderId });
+            var trainer = await OnBordingFormRepository.GetEmployeeById(new { UserId = titleBusinessUnit.TrainerId });
+            model.TrainerName = trainer.IdCommonName;
+            model.TrainerId = trainer?.Id;
+            model.LeaderName = leader?.IdCommonName;
+            model.LeaderId = leader?.Id;
+            model.TrainerPhoneNumber = trainer?.InternalCellphone;
+            model.LeaderPhoneNumber = leader?.InternalCellphone;
+            model.TitleBusinessUnit = titleBusinessUnit.Unit;
+        }
+        else
+        {
+            model.TrainerName = null;
+            model.TrainerId = null;
+            model.LeaderName = null;
+            model.LeaderId = null;
+            model.TrainerPhoneNumber = null;
+            model.LeaderPhoneNumber = null;
+            model.TitleBusinessUnit = null;
+        }
+    }
+
+    private async Task OnUpdateNewHireForm()
+    {
+        try
+        {
+            if (model is not null)
+            {
+                IsSavingForm = true;
+
+                model.IsCompleted = IsFormCompleted(model);
+                await OnBordingFormRepository.SaveNewHireForm(model);
+
+                var formUri = string.Empty;
+                var formState = string.Empty;
+                var hireName = model.NewHireName;
+
+                if (model.IsCompleted)
+                {
+                    formState = "completed.";
+                    IsOnBoardingFormSelected = false;
+                    formUri = $"{NavigationManager.BaseUri}forms/completed/{model.FormId}";
+                }
+                else
+                {
+                    formState = "updated.";
+                    formUri = $"{NavigationManager.Uri}/{model.FormId}";
+                }
+
+                EmailSettings.SetSettings();
+
+                var content = File.ReadAllText(EmailSettings.BodyTemplate)
+                .Replace("_formState_", formState)
+                .Replace("_newHireName_", hireName)
+                .Replace("_new_", "The")
+                .Replace("_formUri_", formUri);
+
+                var recipients = new List<string>();
+                recipients.Add("edjimenez@firstam.com");
+                recipients.Add("odiaz@synergiescorp.com");
+
+                if (model?.Email is not null)
+                {
+                    recipients.Add(model.Email);
+                }
+
+                if (model?.TrainerEmail is not null)
+                {
+                    recipients.Add(model.TrainerEmail);
+                }
+
+                if (model?.LeaderEmail is not null)
+                {
+                    recipients.Add(model.LeaderEmail);
+                }
+                
+                var recipient = string.Join(',', recipients);
+
+                await Mailer.SendWithGraph(recipient, "Onboarding form", content, EmailSettings.Signature);
+                NotificationService?.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Form saved", Duration = 2000 });
+
+                IsSavingForm = false;
+            }
+        }
+        catch (Exception e)
+        {
+
+            Error?.ProcessError(e);
+        }
+    }
+
+    private async Task GetNewHireFormById(OnBoardingFormVM selectedOnBoardingForm)
+    {
+        await GetNewHireFormByToEdit(selectedOnBoardingForm);
+    }
+
+    bool IsFormCompleted(OnBoardingFormVM onBoardingFormVM)
+    {
+        isFormCompleted = !onBoardingFormVM.GetType().GetProperties().Any(form =>
+             form.PropertyType == typeof(string)
+             && string.IsNullOrEmpty((string?)form.GetValue(onBoardingFormVM))
+             || form.PropertyType == typeof(object)
+             && form.GetValue(onBoardingFormVM) == null
+         );
+
+        return isFormCompleted;
+    }
+}

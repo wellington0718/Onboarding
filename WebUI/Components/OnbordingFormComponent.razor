@@ -1,0 +1,551 @@
+﻿@using System.Reflection
+@using Domain.Models
+@using System.Security.Claims
+@inject AppService AppService
+@inject IOnBordingFormRepository OnBordingFormRepository
+
+
+<style>
+    #scrollTop {
+        background: #EA2737;
+        border: none;
+        color: white;
+        width: 80px;
+        height: 40px;
+        border-radius: 10px;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        right: -100px;
+        top: 99%;
+    }
+
+    body {
+        position: relative;
+        overflow-x: hidden;
+    }
+</style>
+
+<div id="itemToExport">
+    <RadzenPanel AllowCollapse="false" class="px-5">
+        <ChildContent>
+            <div class="text-center my-5">
+                <img src="images/logo.png" Style="width: 220px; height:120px;" />
+            </div>
+            <div class="row p-3">
+                <h4 class="m-0 d-flex mb-3 mt-n2 fl align-items-center p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                    <b>FORM TO BE COMPLETED BY THE NEW HIRE BASED ON THE INTERVIEWS</b>
+                </h4>
+                <div class="col-md-6">
+
+                    <div class="row mb-2">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="New Hire" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox Style="width: 100%;background:#E9ECEF; cursor:not-allowed" Disabled=true @bind-Value=Model.NewHireName />
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="New Hire Phone Number" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenMask Mask="(***) ***-****" Name="PhoneNumber" Style="width: 100%;" Pattern="[^0-9]" Placeholder="(000) 000-0000" @bind-Value=Model.NewHiredPhoneNumber />
+                            <RadzenRequiredValidator Component="PhoneNumber" Text="New hire Phone number is required" Popup=true Style="width:max-content; left: 7px; top:18px; z-index:5"  />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Leader" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox Style="width: 100%;background:#E9ECEF; cursor:not-allowed" Disabled=true @bind-Value=Model.LeaderName />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Leader Phone Number" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenMask Mask="(***) ***-****" Name="LeaderPhoneNumber" Style="width: 100%;" Pattern="[^0-9]" Placeholder="(000) 000-0000" @bind-Value=Model.LeaderPhoneNumber />
+                            <RadzenRequiredValidator Component="LeaderPhoneNumber" Text="Leader Phone number is required" Popup=true Style="left: 7px; top:18px; z-index:5" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+
+                    <div class="row mb-2">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Title/Business Unit" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox Style="width: 100%;background:#E9ECEF; cursor:not-allowed" Disabled=true @bind-Value=Model.TitleBusinessUnit />
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="New Hire Email" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox Name="Email" Style="width: 100%;" @bind-Value=Model.Email />
+                            <RadzenRequiredValidator Component="Email" Text="New hire email is required" Popup=true Style="width:max-content; left: 7px; top:18px; z-index:5" />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Trainer" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox style="width: 100%;background:#E9ECEF; cursor:not-allowed" Disabled=true @bind-Value=Model.TrainerName />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Trainer  Phone Number" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenMask Mask="(***) ***-****" Name="TrainerPhoneNumber" Style="width: 100%;" Pattern="[^0-9]" Placeholder="(000) 000-0000" @bind-Value=Model.TrainerPhoneNumber />
+                            <RadzenRequiredValidator Component="TrainerPhoneNumber" Text="Trainer Phone number is required" Popup=true Style="left: 7px; top:18px; z-index:5" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="m-0 d-flex align-items-center p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                    POSITION EXPECTATIONS FROM THE LEADER (DAY 1-5)
+                </h4>
+                <div class="d-flex px-2 flex-column align-items-center" style="background:#d9d9d9">
+                    <p class="mb-0 mt-2" style="font-size:1.2rem"><b>THE POSITION (What the Leader expects)</b></p>
+                    <p class="mb-0"> This is a 2-3 sentence overview that describes what your position is about and what are the key expectations.</p>
+                    <p class="mb-1">(Refer to Job Description)</p>
+
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.LeaderExpectetions />
+                </div>
+            </div>
+            <div class="pb-1 px-2" style="background:#d9d9d9">
+                <div class="d-flex flex-column align-items-center">
+                    <p class="mb-0 mt-1" style="font-size:1.2rem"><b>KEY ACCOMPLISHMENTS</b></p>
+                    <p class="mb-0"> What are the top 3 Key Accomplishments that I must complete in my first 60 days?</p>
+                </div>
+                <ul class="mt-2 mr-2 ml-n2">
+                    <li class="mb-1"> <RadzenTextBox style="width: 100%;" @bind-Value=Model.LeaderKeyAccomplishment1 /></li>
+                    <li class="mb-1"> <RadzenTextBox style="width: 100%;" @bind-Value=Model.LeaderKeyAccomplishment2 /></li>
+                    <li class="mb-1"> <RadzenTextBox style="width: 100%;" @bind-Value=Model.LeaderKeyAccomplishment3 /></li>
+                </ul>
+            </div>
+
+            <div>
+                <div class="d-flex flex-column px-2 align-items-center" style="background:#d9d9d9">
+                    <p class="mb-0 mt-n3" style="font-size:1.2rem"><b>QUICK WIN OPPORTUNITIES</b></p>
+                    <p class="mb-0"> What opportunities, apart from my Key Accomplishments, that might establish me as an important contributor here?</p>
+                    <p class="mb-1">(The one thing that’s most important in my first 30 days)</p>
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100 px-2" @bind-Value=Model.LeaderQuickOpportunities />
+                </div>
+            </div>
+            <div>
+                <div class="d-flex flex-column align-items-center" style="background:#d9d9d9">
+                    <p class="mb-0" style="font-size:1.2rem"><b>THE CURRENT ATMOSPHERE</b></p>
+                    <p class="mb-0">What is going on within my team, company or customers that might impact the way I do my job?</p>
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.LeaderCurrentAtmosphere />
+                </div>
+            </div>
+
+            <h4 class="d-flex mb-0 align-items-center p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                RESPECTED BEHAVIORS EXPECTED FROM THE LEADER (DAYS 1-5)
+            </h4>
+            <div class="d-flex pb-1 px-2 flex-column align-items-center" style="background:#d9d9d9">
+                <p class="mb-0">What behaviors and attitudes, based on my team, do I need to demonstrate on a daily basis to ensure success?</p>
+                <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.LeaderExpectedBehaviours />
+            </div>
+            <div class="mb-0">
+                <h4 class="m-0 d-flex align-items-center p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                    CRITICAL RESOURCES:  INTERVIEW WITH THE LEADER (DAYS 1-5)
+                </h4>
+                <div class="d-flex flex-column p-2">
+                    <p class="mb-0 text-center">Partnerships: Who can I partner with to ensure success?</p>
+                    <div class="row">
+                        <div class="col-md-6 ">
+                            <h2 class="ml-3">WHO?</h2>
+                            <ol>
+                                <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.CreticalResourceWho1 /></li>
+                                <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.CreticalResourceWho2 /></li>
+                                <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.CreticalResourceWho3 /></li>
+                                <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.CreticalResourceWho4 /></li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h2>HOW CAN THEY HELP?</h2>
+                            <RadzenTextBox class="mb-1" Style="width: 100%;" @bind-Value=Model.CreticalResourceHelp1 />
+                            <RadzenTextBox class="mb-1" Style="width: 100%;" @bind-Value=Model.CreticalResourceHelp2 />
+                            <RadzenTextBox class="mb-1" Style="width: 100%;" @bind-Value=Model.CreticalResourceHelp3 />
+                            <RadzenTextBox class="mb-1" Style="width: 100%;" @bind-Value=Model.CreticalResourceHelp4 />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h4 class="m-0 d-flex align-items-center p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                    POSITION EXPECTATIONS FROM THE TRAINER (DAY 1-5)
+                </h4>
+                <div class="d-flex px-2 flex-column align-items-center" style="background:#d9d9d9">
+                    <p class="mb-0 mt-2" style="font-size:1.2rem"><b>THE POSITION (What the Trainer expects)</b></p>
+                    <p class="mb-0">This is a 2-3 sentence overview that describes what your position is about and what are the key expectations.</p>
+                    <p class="mb-1">(Refer to Job Description)</p>
+
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.TrainerExpectetions />
+                </div>
+            </div>
+            <div style="background:#d9d9d9" class="px-2 pb-1">
+                <div class="d-flex flex-column align-items-center">
+                    <p class="mb-0 mt-2" style="font-size:1.2rem"><b>KEY ACCOMPLISHMENTS</b></p>
+                    <p class="mb-0">What are the top 3 Key Accomplishments that I must complete in my first 60 days?</p>
+                </div>
+                <ul class="mt-2 mr-2 ml-n2">
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.TrainerKeyAccomplishment1 /></li>
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.TrainerKeyAccomplishment2 /></li>
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.TrainerKeyAccomplishment3 /></li>
+                </ul>
+            </div>
+            <div style="background:#d9d9d9">
+                <div class="d-flex px-2 flex-column align-items-center">
+                    <p class="mb-0 mt-n3" style="font-size:1.2rem"><b>QUICK WIN OPPORTUNITIES</b></p>
+                    <p class="mb-0"> What opportunities, apart from my Key Accomplishments, that might establish me as an important contributor here?</p>
+                    <p class="mb-1">(The one thing that’s most important in my first 30 days)</p>
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.TrainerQuickOpportunities />
+                </div>
+
+                <div class="d-flex px-2 flex-column align-items-center">
+                    <p class="mb-0 mt-1" style="font-size:1.2rem"><b>THE CURRENT ATMOSPHERE</b></p>
+                    <p class="mb-1">What is going on within my team, company or customers that might impact the way I do my job?</p>
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.TrainerCurrentAtmosphere />
+                </div>
+            </div>
+
+            <div style="background:#d9d9d9" class="pb-2">
+                <div class="d-flex px-2 flex-column align-items-center">
+                    <p class="mb-0 mt-2" style="font-size:1.2rem"><b>ADDITIONAL RESOURCES</b></p>
+                    <p class="my-0">Which additional resources will I need to ensure success?</p>
+                    <p class="mb-1">(e.g., training, tools, materials)</p>
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.AdditionalResources />
+                </div>
+
+
+                <div class="d-flex px-2 flex-column align-items-center">
+                    <p class="my-0" style="font-size:1.2rem"><b>MY SKILLS</b></p>
+                    <p class="mb-0">What skills do I bring to the team that adds unique value?</p>
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.Skills />
+                </div>
+
+                <div class="d-flex px-2 flex-column align-items-center">
+                    <p class="my-0" style="font-size:1.2rem"><b>MY STYLE</b></p>
+                    <p class="mb-0">What does my leader need to know about my work style?</p>
+                    <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.Styles />
+                </div>
+            </div>
+            <div>
+                <h4 class="m-0 d-flex align-items-center flex-column p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                    <span>CHECK-IN APPOINTMENTS</span>
+                    <span> ACKNOWLEDGEMENTS (DAYS 9-10)</span>
+                </h4>
+                <div class="text-center" style="background:#d9d9d9">
+                    <p class="p-1"><b>FORM TO BE COMPLETELY FILL OUT BY THE NEW HIRE BY DAY 10</b></p>
+                </div>
+                <p class="mb-5">At your check-in appointment, we will confirm that your Onboarding Plan has been approved and solicit your feedback on your overall experience.</p>
+            </div>
+            <div class="row">
+
+                <div class="col-md-4">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 pr-0 align-items-center d-flex">
+                            <RadzenLabel Text="New Hire" class="m-0 p-0" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox style="width: 100%;" @bind-Value=Model.CheckInNewHiredName />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.CheckInNewHiredReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-md-4 ">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Leader" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox style="width: 100%;" @bind-Value=Model.CheckInLeaderName />
+                        </div>
+                    </div>
+                    <div class="row mb-7">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.CheckInLeaderReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-md-4 ">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Trainer" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox style="width: 100%;" @bind-Value=Model.CheckInTrainerName />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.CheckInTrainerReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            @if (employeesPermissions.Contains("HHRRSECTION"))
+            {
+                <h2 class="mt-3">REVIEWED BY HUMAN RESOURCES</h2>
+                <div class="row mb-2">
+                    <div class="col-md-2 align-items-center d-flex">
+                        <RadzenLabel Text="Who is it?" />
+                    </div>
+                    <div class="col-md-4">
+                        <RadzenTextBox style="width: 100%;" @bind-Value=Model.HumanResourcesReviewedBy />
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-2 align-items-center d-flex">
+                        <RadzenLabel Text="Date" />
+                    </div>
+                    <div class="col-md-4">
+                        <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.HumanResourcesReviewedDate />
+                    </div>
+                </div>
+                <p><b>Read and Accepted</b></p>
+
+            }
+            <hr />
+            <p><b>FOLLOW-UP</b></p>
+            <div class="text-center p-1" style="background:#d9d9d9">
+                <p class="mt-1"><b>30 DAY FOLLOW-UP</b></p>
+                <hr class="mt-n2" />
+                <p class="d-flex flex-column">
+                    <span><b>KEY ACCOMPLISHMENTS (previously established)</b></span>
+                    <span>What were the top 3 Key Accomplishments that I am expected to complete in my first 60 days?</span>
+                </p>
+                <ul>
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpKeyAccomplishment1 /></li>
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpKeyAccomplishment2 /></li>
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpKeyAccomplishment3 /></li>
+                </ul>
+            </div>
+            <div class="text-center px-2 p-1" style="background:#d9d9d9">
+                <p>After 30 days, what achievements have I accomplished?</p>
+                <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.ThirtyDaysFollowUpAchievements />
+            </div>
+            <div>
+                <h4 class="m-0 mb-3 d-flex align-items-center flex-column p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                    <span>CHECK-IN AT 30 DAY FOLLOW-UP</span>
+                    <span> ACKNOWLEDGEMENT</span>
+                </h4>
+            </div>
+            <div class="row">
+
+                <div class="col-md-4">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 pr-0 align-items-center d-flex">
+                            <RadzenLabel Text="New Hire" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpNewHiredName />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpNewHiredReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-md-4">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Leader" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpLeaderName />
+                        </div>
+                    </div>
+                    <div class="row mb-7">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpLeaderReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-md-4">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Trainer" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpTrainerName />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.ThirtyDaysFollowUpTrainerReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="mt-2">
+                <h4 class="m-0 mb-n3 d-flex align-items-center flex-column p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                    <span>45 DAY FOLLOW-UP</span>
+                    <span>KEY ACCOMPLISHMENTS (previously established)</span>
+                    <p>What were the top 3 Key Accomplishments that I am expected to complete in my first 60 days?</p>
+                </h4>
+            </div>
+            <div class="text-center p-1" style="background:#d9d9d9">
+                <ul class="mt-2 mr-2 ml-n2">
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpKeyAccomplishment1 /></li>
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpKeyAccomplishment2 /></li>
+                    <li class="mb-1"> <RadzenTextBox Style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpKeyAccomplishment3 /></li>
+                </ul>
+
+                <p class="mb-1 pt-1 mt-n3">After 45 days, what achievements have I accomplished?</p>
+                <RadzenTextArea Placeholder="Enter here..." Class="w-100" @bind-Value=Model.FortyFiveDaysFollowUpAchievements />
+            </div>
+            <div>
+                <h4 class="m-0 mb-3 d-flex align-items-center flex-column p-2 justify-content-center w-100" style="background:#244061; color:#FFF;">
+                    <span>CHECK-IN AT 45 DAY FOLLOW-UP</span>
+                    <span> ACKNOWLEDGEMENT</span>
+                </h4>
+            </div>
+            <div class="row">
+
+                <div class="col-md-4">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 pr-0 align-items-center d-flex">
+                            <RadzenLabel Text="New Hire" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox Style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpNewHiredName />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" Style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpNewHiredReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-md-4">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Leader" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox Style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpLeaderName />
+                        </div>
+                    </div>
+                    <div class="row mb-7">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpLeaderReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-md-4">
+                    <p><b>Read and Accepted</b></p>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Trainer" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenTextBox Style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpTrainerName />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-9">
+                            <RadzenDatePicker DateFormat="MM/dd/yyyy" TValue="DateTime?" style="width: 100%;" @bind-Value=Model.FortyFiveDaysFollowUpTrainerReadAndAcceptedDate />
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </ChildContent>
+    </RadzenPanel>
+</div>
+
+<button type="button" onclick="@ScrollTop" id="scrollTop">Top</button>
+@code {
+    [Parameter]
+    public OnBoardingFormVM Model { get; set; } = new();
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+    private List<string> employeesPermissions = new();
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthenticationStateTask is not null)
+        {
+            var userId = (await AuthenticationStateTask)
+           .User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            employeesPermissions = (await OnBordingFormRepository.GetEmployeePermissions(new { userId })).ToList();
+            StateHasChanged();
+
+        }
+    }
+
+    private async void ScrollTop()
+    {
+        await AppService.ScrollTop("#scrollTop");
+    }
+}
+

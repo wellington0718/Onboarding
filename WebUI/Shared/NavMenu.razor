@@ -1,0 +1,58 @@
+﻿@using System.Security.Claims
+@inject AppService AppService
+@inject IOnBordingFormRepository OnBordingFormRepository
+
+<style>
+    .rz-sidebar .rz-panel-menu
+    .rz-navigation-item {
+        font-size: 14px;
+    }
+</style>
+
+<RadzenPanelMenu Match="NavLinkMatch.All">
+    <RadzenPanelMenuItem Text="Home" Icon="home" Path="/onboarding/" />
+</RadzenPanelMenu>
+
+<RadzenPanelMenu Match="NavLinkMatch.Prefix">
+    <RadzenPanelMenuItem Text="Forms">
+        @if (hasBusinessUnit || employeesPermissions.Contains("MANAGEFORMS"))
+        {
+            <RadzenPanelMenuItem Text="New Hire" Path="/onboarding/forms/newhire/" />
+        }
+
+        <RadzenPanelMenuItem Text="In Progress" Path="/onboarding/forms/inprogress/" />
+        <RadzenPanelMenuItem Text="Completed" Path="/onboarding/forms/completed/" />
+
+    </RadzenPanelMenuItem>
+</RadzenPanelMenu>
+
+@if (employeesPermissions.Contains("MANAGEBUSINESSUNIT"))
+{
+    <RadzenPanelMenu Match="NavLinkMatch.Prefix">
+        <RadzenPanelMenuItem Text="Business Unit">
+            <RadzenPanelMenuItem Text="Add Business Unit" Path="/onboarding/businessunit/" />
+        </RadzenPanelMenuItem>
+    </RadzenPanelMenu>
+}
+
+@code
+{
+    private List<string> employeesPermissions = new();
+    private bool hasBusinessUnit;
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthenticationStateTask is not null)
+        {
+            var userId = (await AuthenticationStateTask)
+            .User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value;
+
+            employeesPermissions = (await OnBordingFormRepository.GetEmployeePermissions(new { userId })).ToList();
+            var businessUnits = (await OnBordingFormRepository.GetBusinessUnits(new { Id = string.Empty })).ToList();
+            hasBusinessUnit = businessUnits.Any(b => b.TrainerId.Equals(userId) || b.LeaderId.Equals(userId));
+            StateHasChanged();
+        }
+    }
+}

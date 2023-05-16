@@ -1,0 +1,118 @@
+﻿@page "/forms/completed"
+@page "/forms/completed/{formId}"
+@using System.Security.Claims
+
+<PageTitle>Completed Form</PageTitle>
+@inject IOnBordingFormRepository OnBordingFormRepository
+@inject AppService AppService
+
+<RadzenDataGrid Style="width:1100px" class="mx-auto" Data="onBoardingForms" AllowSorting="true" AllowFiltering="true" AllowPaging="true" PageSize="5" SelectionMode="DataGridSelectionMode.Single" @bind-Value=SelectedOnBoardingForms
+                PagerHorizontalAlign="HorizontalAlign.Center" FilterMode="FilterMode.Simple" TItem="OnBoardingFormVM" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+    <Columns>
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Property="Unit" Title="Business Unit" />
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Property="NewHireName" Title="New hire" />
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Property="LeaderName" Title="Leader" />
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Property="TrainerName" Title="Trainer" />
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Title="View" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+            <Template Context="onBoardingFormVM">
+                <RadzenButton Icon="preview" Style="width: 180px;" Text="View form" Title="View" BusyText="Loading form..." IsBusy=@IsLoadingPDF Click="() => OnLoadPDFBusyClick(onBoardingFormVM.FormId)" @onclick:stopPropagation="true" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="OnBoardingFormVM" Title="Export" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+            <Template Context="onBoardingFormVM">
+                <RadzenButton Icon="picture_as_pdf" Style="width: 180px;" Text="PDF" Title="Edit" BusyText="Exporting PDF..." IsBusy=@IsGeneratingPDF Click="() => OnGeneratingPDFBusyClick(onBoardingFormVM.FormId)" @onclick:stopPropagation="true" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@if (OnBoardingFormToEdit is not null)
+{
+    <div class="d-none">
+        <OnbordingFormComponent Model="OnBoardingFormToEdit" />
+    </div>
+}
+
+<div class="mx-auto mt-5" style="width:1000px">
+    <img id="viwer" class="mx-auto w-100" />
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private bool IsSavingForm;
+    private bool IsGeneratingPDF;
+    private bool IsLoadingPDF;
+    private string userId = string.Empty;
+
+    [Parameter]
+    public string? FormId { get; set; }
+    private List<OnBoardingFormVM> onBoardingForms = new();
+    private IList<OnBoardingFormVM>? SelectedOnBoardingForms;
+    private OnBoardingFormVM? OnBoardingFormToEdit;
+    private string? pdfData;
+    [CascadingParameter]
+    private Error? Error { get; set; }
+    [Inject]
+    private DialogService? DialogService { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthenticationStateTask is not null)
+        {
+            userId = (await AuthenticationStateTask)
+                          .User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            await GetNewHireForms();
+            if (!string.IsNullOrEmpty(FormId))
+            {
+                await OnLoadPDFBusyClick(FormId);
+            }
+        }
+    }
+
+    private async Task GetNewHireForms()
+    {
+        try
+        {
+            DialogService?.Open<Loading>(null);
+            var hasManageFormsPermission = (await OnBordingFormRepository.GetEmployeePermissions(new { userId })).Contains("MANAGEFORMS");
+            onBoardingForms = (await OnBordingFormRepository.GetNewHireForms(new { IsCompleted = 1, userId, hasManageFormsPermission })).ToList();
+            StateHasChanged();
+            DialogService?.Close();
+        }
+        catch (Exception e)
+        {
+            Error?.ProcessError(e);
+        }
+    }
+
+    async Task OnGeneratingPDFBusyClick(string formId)
+    {
+        await GeneratingPDFFromForm(formId);
+    }
+
+    async Task OnLoadPDFBusyClick(string formId)
+    {
+        await  GeneratingPDFFromForm(formId, "view");
+    }
+
+    async Task GeneratingPDFFromForm(string formId, string? view = null)
+    {
+        try
+        {
+            IsGeneratingPDF = true;
+            OnBoardingFormToEdit = onBoardingForms.Find(form => form.FormId.Equals(formId));
+            await GetNewHireForms();
+            var data = await AppService.ExportPDF("");
+            await Task.Delay(2000);
+            SelectedOnBoardingForms = onBoardingForms.Where(forms => forms.FormId.Equals(formId)).ToList();
+            IsGeneratingPDF = false;
+            StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            Error?.ProcessError(e);
+        }
+    }
+}
